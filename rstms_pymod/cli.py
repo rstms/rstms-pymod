@@ -1,16 +1,15 @@
-"""Console script for rstms_pymod."""
+#!/usr/bin/env python3
 
 import sys
 from pathlib import Path
 
 import click
 import click.core
+from tomlkit import dumps, parse
 
-from .version import __version__, __timestamp__
 from .exception_handler import ExceptionHandler
-
-
 from .shell import _shell_completion
+from .version import __timestamp__, __version__
 
 header = f"{__name__.split('.')[0]} v{__version__} {__timestamp__}"
 
@@ -20,30 +19,61 @@ def _ehandler(ctx, option, debug):
     ctx.obj["debug"] = debug
 
 
+def _cat(project):
+    click.echo(dumps(project))
+
 
 @click.group("pymod", context_settings={"auto_envvar_prefix": "PYMOD"})
 @click.version_option(message=header)
-@click.option("-d", "--debug", is_eager=True, is_flag=True, callback=_ehandler, help="debug mode")
-@click.option("--shell-completion", is_flag=False, flag_value="[auto]", callback=_shell_completion, help="configure shell completion")
+@click.option(
+    "--shell-completion",
+    is_flag=False,
+    flag_value="[auto]",
+    callback=_shell_completion,
+    help="configure shell completion",
+)
+@click.option(
+    "-d",
+    "--debug",
+    is_eager=True,
+    is_flag=True,
+    callback=_ehandler,
+    help="debug mode",
+)
+@click.option(
+    "-t",
+    "--toml-file",
+    type=click.Path(
+        dir_okay=False, exists=True, writable=True, path_type=Path
+    ),
+    default="./pyproject.toml",
+    help="pyproject.toml file",
+)
 @click.pass_context
-def cli(ctx, debug, shell_completion):
-    """rstms_pymod top-level help"""
-    pass
+def pymod(ctx, toml_file, debug, shell_completion):
+    """tools for manipulating pyproject.toml"""
+    ctx.obj.update(
+        dict(toml_file=toml_file, project=parse(toml_file.read_text()))
+    )
 
-@cli.command
-@click.option("-r", "--raises", type=str, show_envvar=True, help='example option')
-@click.option("-f", "--flag", is_flag=True, help='example flag option')
-@click.option("-i", "--input-file", type=click.Path(dir_okay=False, readable=True, exists=True, path_type=Path), help="input file")
-@click.option("-o", "--output-file", type=click.Path(dir_okay=False, writable=True, exists=False, path_type=Path), help="output file")
-@click.argument('input', type=click.File('r'))
-@click.argument('output', type=click.File('w'), required=False, default='-')
+
+@pymod.command
 @click.pass_context
-def action(ctx, raises, flag, input_file, output_file, input, output):
-    """action command help"""
+def cat(ctx):
+    """write project file to stdout"""
+    project = ctx.obj["project"]
+    _cat(project)
 
-    if raises == "exception":
-        raise RuntimeError(raises)
+
+@pymod.command
+@click.option("-d", "--dev", is_flag=True, help="add dev dependency")
+@click.argument("module", type=str)
+@click.pass_context
+def add(ctx, dev, module):
+    """add a module to the project's [dev] dependencies"""
+    project = ctx.obj["project"]
+    _cat(project)
 
 
 if __name__ == "__main__":
-    sys.exit(cli())  # pragma: no cover
+    sys.exit(pymod())  # pragma: no cover

@@ -21,7 +21,8 @@ classifiers = [
 dynamic = ["version", "description"] 
 
 dependencies = [
-  "click"
+  "click",
+  "tomlkit"
 ]
 
 [tool.flit.module]
@@ -35,6 +36,7 @@ dev = [
   "isort",
   "flake8",
   "flake8-length",
+  "pdbpp",
   "pytest",
   "python-box",
   "toml",
@@ -59,4 +61,4 @@ collect_ignore = ['setup.py']
 
 
 [project.scripts]
-pymod = "rstms_pymod:cli"
+pymod = "rstms_pymod:pymod"
