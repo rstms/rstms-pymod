@@ -5,9 +5,11 @@ from pathlib import Path
 
 import click
 import click.core
-from tomlkit import dumps, parse
+
+from py_taplo import Taplo
 
 from .exception_handler import ExceptionHandler
+from .project import Project
 from .shell import _shell_completion
 from .version import __timestamp__, __version__
 
@@ -20,10 +22,10 @@ def _ehandler(ctx, option, debug):
 
 
 def _cat(project):
-    click.echo(dumps(project))
+    click.echo(str(project))
 
 
-@click.group("pymod", context_settings={"auto_envvar_prefix": "PYMOD"})
+@click.group(name="pymod", context_settings={"auto_envvar_prefix": "PYMOD"})
 @click.version_option(message=header)
 @click.option(
     "--shell-completion",
@@ -41,8 +43,8 @@ def _cat(project):
     help="debug mode",
 )
 @click.option(
-    "-t",
-    "--toml-file",
+    "-p",
+    "--project-file",
     type=click.Path(
         dir_okay=False, exists=True, writable=True, path_type=Path
     ),
@@ -50,14 +52,12 @@ def _cat(project):
     help="pyproject.toml file",
 )
 @click.pass_context
-def pymod(ctx, toml_file, debug, shell_completion):
+def cli(ctx, project_file, debug, shell_completion):
     """tools for manipulating pyproject.toml"""
-    ctx.obj.update(
-        dict(toml_file=toml_file, project=parse(toml_file.read_text()))
-    )
+    ctx.obj["project"] = Project(project_file)
 
 
-@pymod.command
+@cli.command
 @click.pass_context
 def cat(ctx):
     """write project file to stdout"""
@@ -65,15 +65,61 @@ def cat(ctx):
     _cat(project)
 
 
-@pymod.command
-@click.option("-d", "--dev", is_flag=True, help="add dev dependency")
+@cli.command
+@click.option("-d", "--dev", "extra", flag_value="dev", help="dev/test")
+@click.option("-D", "--doc", "extra", flag_value="docs", help="documentation")
 @click.argument("module", type=str)
 @click.pass_context
-def add(ctx, dev, module):
-    """add a module to the project's [dev] dependencies"""
+def add(ctx, module, extra):
+    """add a module to the project [dev,doc] dependencies"""
     project = ctx.obj["project"]
-    _cat(project)
+    project.add_dependency(module, extra)
+    project.write()
+    return 0
+
+@cli.command
+@click.option("-d", "--dev", "extra", flag_value="dev", help="dev/test")
+@click.option("-D", "--doc", "extra", flag_value="docs", help="documentation")
+@click.argument("module", type=str)
+@click.pass_context
+def rm(ctx, module, extra):
+    """remove a module from the project's [dev,doc] dependencies"""
+    project = ctx.obj["project"]
+    project.delete_dependency(module, extra)
+    project.write()
+    return 0
+
+
+@cli.command
+@click.option("-d", "--dev", "extra", flag_value="dev", help="dev/test")
+@click.option("-D", "--doc", "extra", flag_value="docs", help="documentation")
+@click.pass_context
+def ls(ctx, extra):
+    """list dependencies"""
+    project = ctx.obj["project"]
+    deps = project.dependencies(extra)
+    for dep in deps:
+        click.echo(dep)
+    return 0
+
+@cli.command
+@click.pass_context
+def fmt(ctx):
+    """reformat pyproject.toml"""
+    project = ctx.obj["project"]
+    click.echo(project.fmt())
+    return 0
+
+
+@cli.command
+@click.pass_context
+def lint(ctx):
+    """reformat pyproject.toml"""
+    project = ctx.obj["project"]
+    click.echo(project.lint())
+    return 0
+
 
 
 if __name__ == "__main__":
-    sys.exit(pymod())  # pragma: no cover
+    sys.exit(cli())  # pragma: no cover

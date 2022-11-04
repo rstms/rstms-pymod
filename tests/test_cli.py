@@ -5,9 +5,10 @@ import shlex
 
 import pytest
 from click.testing import CliRunner
+from py_taplo import Taplo
 
 import rstms_pymod
-from rstms_pymod import __version__, pymod
+from rstms_pymod import __version__, cli
 
 
 def test_version():
@@ -29,12 +30,16 @@ def run():
         assert_exception = kwargs.pop("assert_exception", None)
         env.update(kwargs.pop("env", {}))
         kwargs["env"] = env
-        result = runner.invoke(pymod, cmd, **kwargs)
-        if assert_exception is not None:
-            assert isinstance(result.exception, assert_exception)
-        elif result.exception is not None:
+
+        result = runner.invoke(cli, cmd, **kwargs)
+
+        while result.exception:
+            if assert_exception:
+                if isinstance(result.exception, assert_exception):
+                    break
             raise result.exception from result.exception
-        elif assert_exit is not None:
+
+        if assert_exit is not None:
             assert result.exit_code == assert_exit, (
                 f"Unexpected {result.exit_code=} (expected {assert_exit})\n"
                 f"cmd: '{shlex.join(cmd)}'\n"
@@ -59,18 +64,23 @@ def test_cli_exception(run):
 
     cmd = ["--shell-completion", "and_now_for_something_completely_different"]
 
-    with pytest.raises(RuntimeError) as exc:
-        result = run(cmd)
-    assert isinstance(exc.value, RuntimeError)
-
     # example of testing for expected exception
-    result = run(cmd, assert_exception=RuntimeError)
+    result = run(cmd, assert_exception=RuntimeError, assert_exit=None)
     assert result.exception
     assert result.exc_info[0] == RuntimeError
     assert result.exception.args[0] == "cannot determine shell"
 
-    with pytest.raises(AssertionError) as exc:
-        result = run(cmd, assert_exception=ValueError)
+    # example of a raised exception other than the expected one
+    # this will break where the exception is raised
+    # expecting TypeError but code raises RuntimeError
+    with pytest.raises(RuntimeError) as exc:
+        result = run(cmd, assert_exception=TypeError, assert_exit=None)
+    assert exc
+    assert exc.type is RuntimeError
+
+    # example of catching the exception locally with pytest.raises
+    with pytest.raises(RuntimeError) as exc:
+        result = run(cmd)
     assert exc
 
 
@@ -81,3 +91,28 @@ def test_cli_exit(run):
     assert result
     with pytest.raises(AssertionError):
         run(["--help"], assert_exit=-1)
+
+
+def test_cli_add_module(run, project_file, shared_datadir, diff):
+    old = shared_datadir / "old"
+    old.write_text(project_file.read_text())
+
+    cmd = ["--project-file", str(project_file), "add", "kniggits"]
+    result = run(cmd)
+    assert not result.output
+
+    new = project_file
+
+    d = diff(old, new)
+
+    assert not d.match
+
+    taplo = Taplo()
+    selector='project.dependencies'
+
+    old_deps = taplo.dict(old, selector)
+    new_deps = taplo.dict(new, selector)
+    
+    assert old_deps != new_deps
+
+    assert set(new_deps).difference(set(old_deps)) == set(['kniggits'])
