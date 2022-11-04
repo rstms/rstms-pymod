@@ -1,8 +1,7 @@
 # tests for Project object
 
-from py_taplo import Taplo
-
 import pytest
+from py_taplo import Taplo
 
 
 @pytest.fixture
@@ -52,7 +51,7 @@ def test_project_write_backup(project):
 
 
 def test_project_add_module(project, diff):
-    old=project.write()
+    old = project.write()
     assert str(old) != str(project.path)
     assert diff(old, project.path).match
     project.add_dependency("a-bridge")
@@ -62,25 +61,23 @@ def test_project_add_module(project, diff):
     new = project.path
 
     taplo = Taplo()
-    selector='project.dependencies'
+    selector = "project.dependencies"
     old_deps = taplo.dict(old, selector)
     new_deps = taplo.dict(new, selector)
-    
+
     assert old_deps != new_deps
 
-    assert set(new_deps).difference(set(old_deps)) == set(['a-bridge'])
-    
+    assert set(new_deps).difference(set(old_deps)) == set(["a-bridge"])
+
 
 def test_project_delete_module(project, diff):
-    project.delete_dependency('toml', 'dev')
+    project.delete_dependency("toml", "dev")
     old = project.write()
     new = project.path
-    assert not diff(old, new).match 
+    assert not diff(old, new).match
     taplo = Taplo()
-    selector='project.optional-dependencies.dev'
+    selector = "project.optional-dependencies.dev"
     old_deps = taplo.dict(old, selector)
     new_deps = taplo.dict(new, selector)
-    assert len(old_deps) == 1+len(new_deps)
-    assert set(old_deps).difference(set(new_deps)) == set(['toml'])
-
-    
+    assert len(old_deps) == 1 + len(new_deps)
+    assert set(old_deps).difference(set(new_deps)) == set(["toml"])

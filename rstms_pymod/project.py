@@ -47,9 +47,9 @@ class Project:
 
     def _dependency_table(self, optional=None):
         if optional:
-            selectors = ['project', 'optional-dependencies', optional]
+            selectors = ["project", "optional-dependencies", optional]
         else:
-            selectors = ['project', 'dependencies']
+            selectors = ["project", "dependencies"]
         table = self.doc
         for selector in selectors:
             table = table[selector]
@@ -69,7 +69,6 @@ class Project:
             if module not in module_list:
                 table.remove(module)
 
-
     def add_dependency(self, module, optional=None):
         module_list = self.dependencies(optional)
         modules = {self._module_key(m): m for m in module_list}
@@ -85,7 +84,6 @@ class Project:
         modules.pop(key, None)
         module_list = list(modules.values())
         self.set_dependencies(module_list, optional)
-
 
     def fmt(self):
         """reformat pyproject.toml"""

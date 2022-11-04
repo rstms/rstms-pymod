@@ -108,11 +108,11 @@ def test_cli_add_module(run, project_file, shared_datadir, diff):
     assert not d.match
 
     taplo = Taplo()
-    selector='project.dependencies'
+    selector = "project.dependencies"
 
     old_deps = taplo.dict(old, selector)
     new_deps = taplo.dict(new, selector)
-    
+
     assert old_deps != new_deps
 
-    assert set(new_deps).difference(set(old_deps)) == set(['kniggits'])
+    assert set(new_deps).difference(set(old_deps)) == set(["kniggits"])

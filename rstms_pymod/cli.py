@@ -6,8 +6,6 @@ from pathlib import Path
 import click
 import click.core
 
-from py_taplo import Taplo
-
 from .exception_handler import ExceptionHandler
 from .project import Project
 from .shell import _shell_completion
@@ -77,6 +75,7 @@ def add(ctx, module, extra):
     project.write()
     return 0
 
+
 @cli.command
 @click.option("-d", "--dev", "extra", flag_value="dev", help="dev/test")
 @click.option("-D", "--doc", "extra", flag_value="docs", help="documentation")
@@ -102,6 +101,7 @@ def ls(ctx, extra):
         click.echo(dep)
     return 0
 
+
 @cli.command
 @click.pass_context
 def fmt(ctx):
@@ -118,7 +118,6 @@ def lint(ctx):
     project = ctx.obj["project"]
     click.echo(project.lint())
     return 0
-
 
 
 if __name__ == "__main__":
